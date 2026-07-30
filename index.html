@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Grilla TV - 24 horas + YouTube</title>
+    <style>
+        :root {
+            --bg-body: #1a1a1a;
+            --bg-grilla: #000;
+            --bg-encabezado: #222;
+            --bg-canal: #181818;
+            --bg-reproductor: #000;
+            --bg-anuncio: #111;
+            --texto: white;
+            --texto-anuncio: #888;
+            --borde: #333;
+            --borde-grilla: #555;
+            --borde-anuncio: #444;
+            --sombra: rgba(0, 0, 0, 0.8);
+            --linea-tiempo: red;
+        }
+        body.modo-claro {
+            --bg-body: #e8e8e8;
+            --bg-grilla: #fff;
+            --bg-encabezado: #e0e0e0;
+            --bg-canal: #f0f0f0;
+            --bg-reproductor: #e0e0e0;
+            --bg-anuncio: #f5f5f5;
+            --texto: #111;
+            --texto-anuncio: #666;
+            --borde: #ccc;
+            --borde-grilla: #999;
+            --borde-anuncio: #ccc;
+            --sombra: rgba(0, 0, 0, 0.2);
+            --linea-tiempo: #d00;
+        }
+        body.alto-contraste {
+            --bg-body: #000;
+            --bg-grilla: #000;
+            --bg-encabezado: #000;
+            --bg-canal: #000;
+            --bg-reproductor: #000;
+            --bg-anuncio: #000;
+            --texto: #fff;
+            --texto-anuncio: #ff0;
+            --borde: #fff;
+            --borde-grilla: #ff0;
+            --borde-anuncio: #ff0;
+            --sombra: none;
+            --linea-tiempo: #ff0;
+        }
+        body.alto-contraste .programa {
+            border: 2px solid #fff;
+            text-shadow: none;
+            box-shadow: none;
+            background: #000 !important;
+            color: #fff;
+        }
+        body.alto-contraste .programa:hover {
+            outline: 2px solid #ff0;
+            box-shadow: 0 0 15px #ff0;
+        }
+        body.alto-contraste .linea-tiempo {
+            background: #ff0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background: var(--bg-body);
+            color: var(--texto);
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+            justify-content: center;
+            align-items: stretch;
+            gap: 0;
+        }
+        .pantalla-rotar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: white;
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 24px;
+            gap: 20px;
+            pointer-events: all;
+        }
+        .pantalla-rotar .icono-girar {
+            font-size: 80px;
+            animation: rotar 2s infinite;
+        }
+        @keyframes rotar {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            75% { transform: rotate(90deg); }
+            100% { transform: rotate(0deg); }
+        }
+        body.bloqueado .contenedor-central,
+        body.bloqueado .panel-anuncio,
+        body.bloqueado .reloj,
+        body.bloqueado .clima,
+        body.bloqueado .boton-modo,
+        body.bloqueado .boton-ac,
+        body.bloqueado .dropdown-cotizacion,
+        body.bloqueado .dropdown-clima {
+            display: none !important;
+        }
+        .panel-anuncio {
+            flex: 0 0 160px;
+            background: var(--bg-anuncio);
+            border: 1px dashed var(--borde-anuncio);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--texto-anuncio);
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            position: relative;
+            overflow-y: auto;
+            padding: 20px 10px;
+            gap: 20px;
+        }
+        .panel-anuncio .anuncio-placeholder {
+            width: 120px;
+            height: 250px;
+            border: 2px dashed var(--borde-anuncio);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 13px;
+            opacity: 0.7;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(128, 128, 128, 0.03) 10px, rgba(128, 128, 128, 0.03) 20px);
+            transition: all 0.3s;
+        }
+        .contenedor-central {
+            flex: 1 1 auto;
+            max-width: 1300px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            min-width: 700px;
+        }
+        .reproductor-container {
+            flex: 0 0 45vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-reproductor);
+            border-bottom: 2px solid var(--borde-grilla);
+            position: relative;
+            transition: background 0.3s, border-color 0.3s;
+            margin: 4px 4px 0 4px;
+            border-radius: 12px 12px 0 0;
+        }
+        .reproductor-container iframe {
+            width: 65%;
+            height: 85%;
+            border-radius: 12px;
+            box-shadow: 0 0 20px var(--sombra);
+            max-width: 800px;
+        }
+        .overlay-reproductor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            z-index: 20;
+            text-align: center;
+            padding: 20px;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+        .overlay-reproductor.oculto {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .overlay-reproductor .mensaje-principal {
+            font-size: clamp(24px, 5vw, 48px);
+            font-weight: bold;
+            text-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+        }
+        .overlay-reproductor .sub-mensaje {
+            font-size: clamp(12px, 1.8vw, 20px);
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+        .error-reproductor {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--texto);
+            background: rgba(0, 0, 0, 0.8);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            z-index: 25;
+        }
+        .error-reproductor a {
+            color: var(--linea-tiempo);
+            text-decoration: underline;
+            font-size: 18px;
+        }
+        .indicador-auto {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: #d32f2f;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 30;
+            opacity: 0.85;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+            white-space: nowrap;
+            cursor: default;
+        }
+        .indicador-auto.manual {
+            background: #d32f2f;
+        }
+        .contenedor-grilla {
+            flex: 1 1 auto;
+            overflow: hidden;
+            border: 2px solid var(--borde-grilla);
+            border-radius: 0 0 12px 12px;
+            background: var(--bg-grilla);
+            box-shadow: 0 0 20px var(--sombra);
+            transition: background 0.3s, border-color 0.3s;
+            margin: 0 4px 4px 4px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .grilla-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            display: flex;
+            touch-action: pan-x pan-y;
+        }
+        .columna-canales {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: var(--bg-canal);
+            width: 180px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--borde);
+        }
+        .canal-nombre {
+            height: 90px;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--borde);
+            background: var(--bg-canal);
+            justify-content: flex-start;
+            font-size: 14px;
+        }
+        .encabezado-canal {
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: var(--bg-encabezado);
+            border-bottom: 1px solid var(--borde);
+            position: sticky;
+            top: 0;
+            z-index: 12;
+            font-size: 14px;
+        }
+        .grilla-wrapper {
+            flex: 1;
+            overflow: clip;
+            height: fit-content;
+        }
+        .grilla {
+            display: grid;
+            grid-template-columns: repeat(48, 75px);
+            grid-template-rows: 55px repeat(50, 90px);
+            width: max-content;
+            position: relative;
+        }
+        .celda {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--borde);
+            padding: 0;
+            margin: 0;
+            overflow: visible;
+            transition: border-color 0.3s;
+        }
+        .encabezado {
+            background: var(--bg-encabezado);
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 11;
+            transition: background 0.3s;
+            font-size: 13px;
+        }
+        .programa {
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            z-index: 2;
+            box-sizing: border-box;
+            overflow: hidden;
+            text-align: center;
+            padding: 3px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-shadow: 0 0 6px var(--sombra);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+            white-space: normal;
+            word-break: break-word;
+        }
+        .programa:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 18px rgba(255, 255, 255, 0.4);
+            z-index: 5;
+        }
+        .programa div {
+            pointer-events: none;
+        }
+        .programa .titulo {
+            font-weight: bold;
+            font-size: 1.15em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .programa .presentadores {
+            font-size: 0.85em;
+            opacity: 0.85;
+            margin: 1px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .programa .horario {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+        @keyframes pulso-vivo {
+            0% { background-color: var(--color-base, #444); }
+            50% { background-color: #d32f2f; }
+            100% { background-color: var(--color-base, #444); }
+        }
+        .programa.en-vivo {
+            animation: pulso-vivo 2s infinite ease-in-out;
+        }
+        .linea-tiempo {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: var(--linea-tiempo);
+            z-index: 6;
+            pointer-events: none;
+            opacity: 0.9;
+            transition: background 0.3s;
+        }
+        .reloj {
+            position: fixed;
+            top: 10px;
+            left: 175px;
+            z-index: 100;
+            padding: 6px 16px;
+            background: var(--bg-encabezado);
+            color: var(--texto);
+            border: 2px solid var(--borde-grilla);
+            border-radius: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px var(--sombra);
+            transition: all 0.3s;
+            letter-spacing: 1px;
+        }
+        .boton-modo {
+            position: fixed;
+            top: 10px;
+            right: 175px;
+            z-index: 100;
+            padding: 6px 12px;
+            border: 2px solid var(--borde-grilla);
+            background: var(--bg-encabezado);
+            color: var(--texto);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px var(--sombra);
+            font-size: 13px;
+        }
+        .boton-modo:hover {
+            transform: scale(1.05);
+        }
+        .boton-ac {
+            position: fixed;
+            bottom: 20px;
+            left: 175px;
+            z-index: 100;
+            padding: 8px 14px;
+            border: 2px solid var(--borde-grilla);
+            background: var(--bg-encabezado);
+            color: var(--texto);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px var(--sombra);
+            font-size: 15px;
+        }
+        .boton-ac:hover {
+            transform: scale(1.05);
+        }
+        .dropdown-cotizacion, .dropdown-clima {
+            position: fixed;
+            z-index: 100;
+        }
+        .dropdown-cotizacion { top: 55px; right: 175px; }
+        .dropdown-clima { top: 55px; left: 175px; }
+
+        .dropdown-cotizacion .btn-dropdown, .dropdown-clima .btn-dropdown {
+            padding: 6px 14px;
+            border: 2px solid var(--borde-grilla);
+            background: var(--bg-encabezado);
+            color: var(--texto);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px var(--sombra);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .dropdown-cotizacion .btn-dropdown:hover, .dropdown-clima .btn-dropdown:hover {
+            transform: scale(1.05);
+        }
+        .dropdown-cotizacion .panel-cotizacion, .dropdown-clima .panel-clima {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 280px;
+            max-width: 400px;
+            max-height: 60vh;
+            overflow-y: auto;
+            background: var(--bg-encabezado);
+            color: var(--texto);
+            border: 2px solid var(--borde-grilla);
+            border-radius: 16px;
+            padding: 12px 16px;
+            box-shadow: 0 8px 24px var(--sombra);
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: normal;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        .dropdown-clima .panel-clima { right: auto; left: 0; }
+        .dropdown-cotizacion .panel-cotizacion.mostrar, .dropdown-clima .panel-clima.mostrar {
+            display: block;
+        }
+        .dropdown-cotizacion .panel-cotizacion .cotizacion-item, .dropdown-clima .panel-clima .clima-dia {
+            border-bottom: 1px solid var(--borde);
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .dropdown-cotizacion .panel-cotizacion .cotizacion-item:last-child, .dropdown-clima .panel-clima .clima-dia:last-child {
+            border-bottom: none;
+        }
+        .error-grilla {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--texto);
+            background: var(--bg-grilla);
+            text-align: center;
+            padding: 20px;
+            font-size: clamp(28px, 8vw, 60px);
+        }
+        .dropdown-cotizacion .panel-cotizacion::-webkit-scrollbar,
+        .dropdown-clima .panel-clima::-webkit-scrollbar {
+            width: 6px;
+        }
+        .dropdown-cotizacion .panel-cotizacion::-webkit-scrollbar-track,
+        .dropdown-clima .panel-clima::-webkit-scrollbar-track {
+            background: var(--bg-body);
+            border-radius: 8px;
+        }
+        .dropdown-cotizacion .panel-cotizacion::-webkit-scrollbar-thumb,
+        .dropdown-clima .panel-clima::-webkit-scrollbar-thumb {
+            background: var(--borde-grilla);
+            border-radius: 8px;
+        }
+        @media (max-width: 1100px) {
+            .panel-anuncio {
+                flex: 0 0 80px;
+                font-size: 10px;
+                padding: 10px 4px;
+            }
+            .panel-anuncio .anuncio-placeholder {
+                width: 60px;
+                height: 120px;
+                font-size: 9px;
+            }
+            .contenedor-central {
+                min-width: 500px;
+                max-width: 100%;
+            }
+            .reloj, .boton-ac, .dropdown-clima { left: 95px; }
+            .boton-modo, .dropdown-cotizacion { right: 95px; }
+        }
+        @media (max-width: 700px) {
+            .panel-anuncio { display: none; }
+            .contenedor-central { min-width: 100%; }
+            .reloj, .boton-ac, .dropdown-clima { left: 10px; font-size: 12px; padding: 4px 8px; }
+            .boton-modo, .dropdown-cotizacion { right: 10px; }
+            .reproductor-container iframe { width: 90%; height: 75%; }
+            .columna-canales { width: 80px; }
+            .canal-nombre { font-size: 9px; padding-left: 4px; }
+            .encabezado-canal { font-size: 10px; }
+            .grilla { grid-template-columns: repeat(48, 45px); grid-template-rows: 35px repeat(50, 60px); }
+            .encabezado { font-size: 8px; }
+            .programa { font-size: 7px; padding: 1px 2px; }
+            .reloj { font-size: 14px; top: 5px; }
+            .indicador-auto { top: 6px; right: 8px; font-size: 10px; padding: 3px 8px; }
+        }
+    </style>
+</head>
+<body class="modo-oscuro">
+    <div class="pantalla-rotar" id="pantallaRotar">
+        <div class="icono-girar">📱</div>
+        <div>Por favor, gira tu dispositivo</div>
+        <div style="font-size:18px; opacity:0.8;">La experiencia es mejor en horizontal</div>
+    </div>
+    <aside class="panel-anuncio" id="panelAnuncioIzq">
+        <div style="font-size:12px; opacity:0.6; margin-bottom:10px;">📢 PUBLICIDAD</div>
+        <div class="anuncio-placeholder">Anuncio<br>300x250</div>
+        <div class="anuncio-placeholder">Anuncio<br>300x250</div>
+        <div class="anuncio-placeholder">Anuncio<br>300x600</div>
+    </aside>
+    <div class="contenedor-central">
+        <div class="reproductor-container" id="reproductorContainer">
+            <iframe id="youtubePlayer" src="about:blank" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <div class="overlay-reproductor" id="overlayReproductor">
+                <div class="mensaje-principal">Seleccione un programa</div>
+                <div class="sub-mensaje">Haga clic en cualquier programa de la grilla</div>
+            </div>
+            <div class="error-reproductor" id="errorReproductor">
+                <span>⚠️ Este video no se puede reproducir aquí</span>
+                <a href="#" target="_blank" id="linkVerYouTube">Ver en YouTube</a>
+            </div>
+            <div class="indicador-auto manual" id="indicadorAuto">🔴 MANUAL - Gelatina</div>
+        </div>
+        <div class="contenedor-grilla" id="contenedorGrilla">
+            <div class="grilla-container" id="grillaContainer">
+                <div class="columna-canales" id="columnaCanales"></div>
+                <div class="grilla-wrapper" id="grillaWrapper">
+                    <div class="grilla" id="grilla"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <aside class="panel-anuncio" id="panelAnuncioDer">
+        <div style="font-size:12px; opacity:0.6; margin-bottom:10px;">📢 PUBLICIDAD</div>
+        <div class="anuncio-placeholder">Anuncio<br>300x250</div>
+        <div class="anuncio-placeholder">Anuncio<br>300x250</div>
+        <div class="anuncio-placeholder">Anuncio<br>300x600</div>
+    </aside>
+    <button class="boton-modo" id="botonModo" title="Cambiar modo claro/oscuro">☀️ Modo Claro</button>
+    <button class="boton-ac" id="botonAC" title="Activar/desactivar alto contraste">👁️ Alto Contraste</button>
+    <div class="reloj" id="reloj">00:00</div>
+
+    <div class="dropdown-clima" id="dropdownClima">
+        <button class="btn-dropdown" id="btnClima">🌡️ --°C</button>
+        <div class="panel-clima" id="panelClima">
+            <div id="contenidoClima">Cargando clima...</div>
+        </div>
+    </div>
+
+    <div class="dropdown-cotizacion" id="dropdownCotizacion">
+        <button class="btn-dropdown" id="btnCotizacion">💰 Cotizaciones</button>
+        <div class="panel-cotizacion" id="panelCotizacion">
+            <div id="contenidoCotizacion">Cargando...</div>
+        </div>
+    </div>
+    <script>
+        const nombresACanal = {
+            "gelatina": 1, "futurock": 2, "olga": 3, "luzutv": 4, "vorterix": 5,
+            "blender": 6, "neura": 7, "carnaval": 8, "mate": 9, "pais de boludos": 10,
+            "urbana play": 11, "el destape": 12, "la casa streaming": 13, "bondi live": 14,
+            "net tv": 15, "azz": 16, "rock & pop": 17, "c5n": 18, "tv pública": 19,
+            "la nacion": 20, "cronica": 21, "tn": 22
+        };
+        function nombreACanal(valor) {
+            const str = String(valor).trim();
+            const lower = str.toLowerCase();
+            if (nombresACanal[lower] !== undefined) return nombresACanal[lower];
+            const matchCanal = lower.match(/^canal\s*(\d+)$/);
+            if (matchCanal) {
+                const num = parseInt(matchCanal[1], 10);
+                if (num >= 1 && num <= 50) return num;
+            }
+            const num = parseInt(str, 10);
+            if (!isNaN(num) && num >= 1 && num <= 50) return num;
+            return null;
+        }
+        let lineaTiempo = null;
+        let intervaloActualizacion = null;
+        let horaActualGlobal = 0;
+        let minutosActualGlobal = 0;
+        let elementoReloj = null;
+        let urlActualYoutube = '';
+        let videoIDActual = null;
+        let escalaActual = 1;
+        let teclaZPresionada = false;
+        let ultimaFechaCargaStr = null;
+        let cargandoProgramacion = false;
+        let distanciaPinchazoInicial = 0;
+        let escalaInicialPinchazo = 1;
+        let datosProgramacionActual = [];
+        let modoAutomatico = false;
+        let canalSeleccionado = 1;
+        let programaReproducidoAutomaticamente = null;
+        let primerCargaCompletada = false;
+        let recordatoriosProgramados = [];
+        let inactividadTimer = null;
+        let recargaPreviaHecha = false;
+        let bloqueoActualizaciones = false;
+        const CANAL_AUTO_DEFAULT = 1;
+
+        const URLS_CSV_POR_DIA = [
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=0&single=true&output=csv",
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=661720075&single=true&output=csv",
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=991403330&single=true&output=csv",
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=751247568&single=true&output=csv",
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=1900384547&single=true&output=csv",
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=1914323568&single=true&output=csv",
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_yWAHkp_wEQ12M-S6J-fuoXf4pIP-4cCUYWpxtJG0s63OkmWUyxfd5dSH9muXYKGMLLd3Rqes3rfM/pub?gid=1108549132&single=true&output=csv"
+        ];
+
+        function obtenerURLCSV() {
+            const ahora = new Date();
+            const diaSemana = ahora.getDay();
+            const indice = (diaSemana + 6) % 7;
+            return URLS_CSV_POR_DIA[indice];
+        }
+
+        async function forzarLandscape() {
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+            } catch (error) {}
+        }
+        function verificarOrientacion() {
+            const pantallaRotar = document.getElementById('pantallaRotar');
+            if (window.innerWidth < 768 && window.innerHeight > window.innerWidth) {
+                forzarLandscape();
+                setTimeout(() => {
+                    if (window.innerHeight > window.innerWidth) {
+                        document.body.classList.add('bloqueado');
+                        pantallaRotar.style.display = 'flex';
+                    }
+                }, 500);
+            } else {
+                document.body.classList.remove('bloqueado');
+                pantallaRotar.style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', verificarOrientacion);
+        window.addEventListener('orientationchange', () => { setTimeout(verificarOrientacion, 300); });
+        window.addEventListener('load', () => { forzarLandscape(); verificarOrientacion(); });
+        function pedirPermisoNotificaciones() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+        window.addEventListener('load', pedirPermisoNotificaciones);
+        function extraerIDYouTube(url) {
+            if (!url) return null;
+            const patrones = [
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&\s]+)/,
+                /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?\s]+)/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^/?\s]+)/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/live\/([^/?\s]+)/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([^/?\s]+)/,
+                /(?:https?:\/\/)?(?:m\.)?youtube\.com\/watch\?v=([^&\s]+)/
+            ];
+            for (const patron of patrones) {
+                const match = url.match(patron);
+                if (match) return match[1];
+            }
+            return null;
+        }
+        function mostrarOverlay(mensaje, subMensaje = '') {
+            const overlay = document.getElementById('overlayReproductor');
+            overlay.querySelector('.mensaje-principal').textContent = mensaje;
+            overlay.querySelector('.sub-mensaje').textContent = subMensaje;
+            overlay.classList.remove('oculto');
+        }
+        function ocultarOverlay() { document.getElementById('overlayReproductor').classList.add('oculto'); }
+        function mostrarNoDisponible() {
+            const iframe = document.getElementById('youtubePlayer');
+            iframe.src = 'about:blank';
+            urlActualYoutube = '';
+            videoIDActual = null;
+            ocultarErrorReproductor();
+            mostrarOverlay('Transmisión no disponible', 'Este programa no tiene un enlace disponible');
+        }
+        function mostrarErrorReproductor(url) {
+            document.getElementById('youtubePlayer').style.display = 'none';
+            const errorDiv = document.getElementById('errorReproductor');
+            errorDiv.style.display = 'flex';
+            document.getElementById('linkVerYouTube').href = url;
+            mostrarOverlay('Transmisión en vivo no disponible', 'El enlace no pudo ser cargado');
+        }
+        function ocultarErrorReproductor() {
+            document.getElementById('youtubePlayer').style.display = '';
+            document.getElementById('errorReproductor').style.display = 'none';
+        }
+        function reproducirVideo(url) {
+            const iframe = document.getElementById('youtubePlayer');
+            const nuevoID = extraerIDYouTube(url);
+            if (nuevoID && videoIDActual === nuevoID) {
+                ocultarOverlay();
+                ocultarErrorReproductor();
+                iframe.style.display = '';
+                return;
+            }
+            ocultarErrorReproductor();
+            if (nuevoID) {
+                urlActualYoutube = url;
+                videoIDActual = nuevoID;
+                iframe.src = `https://www.youtube-nocookie.com/embed/${nuevoID}?autoplay=1&mute=0&enablejsapi=1`;
+                ocultarOverlay();
+                iframe.style.display = '';
+            } else {
+                mostrarOverlay('Transmisión en vivo no disponible', 'El enlace no es un video de YouTube válido');
+                mostrarErrorReproductor(url);
+                videoIDActual = null;
+                urlActualYoutube = '';
+            }
+        }
+        function obtenerNombreCanal(numero) {
+            const nombres = {
+                1: "Gelatina", 2: "FutuRock", 3: "Olga", 4: "LuzuTV", 5: "Vorterix",
+                6: "Blender", 7: "Neura", 8: "Carnaval", 9: "Mate", 10: "Pais de Boludos",
+                11: "Urbana Play", 12: "El Destape", 13: "La Casa Streaming", 14: "Bondi Live",
+                15: "Net TV", 16: "Azz", 17: "Rock & Pop", 18: "C5N", 19: "TV Pública",
+                20: "La Nacion", 21: "Cronica", 22: "TN"
+            };
+            return nombres[numero] || `Canal ${numero}`;
+        }
+        function actualizarIndicadorAuto() {
+            const indicador = document.getElementById('indicadorAuto');
+            const nombre = obtenerNombreCanal(canalSeleccionado);
+            if (modoAutomatico) {
+                indicador.textContent = `⚡ AUTO - ${nombre}`;
+                indicador.classList.remove('manual');
+            } else {
+                indicador.textContent = `🔴 MANUAL - ${nombre}`;
+                indicador.classList.add('manual');
+            }
+        }
+        function clicPrograma(event, url, tieneURL, esYouTube, canal, horaInicioPrograma) {
+            event.stopPropagation();
+            if (!tieneURL) {
+                mostrarNoDisponible();
+                reiniciarTemporizadorInactividad();
+                return;
+            }
+            const idClic = extraerIDYouTube(url);
+            if (idClic && videoIDActual === idClic) {
+                reiniciarTemporizadorInactividad();
+                return;
+            }
+            const ahora = new Date();
+            const horaActualDecimal = ahora.getHours() + ahora.getMinutes() / 60;
+            const inicioProg = horaInicioPrograma;
+            if (inicioProg > horaActualDecimal && inicioProg < 24) {
+                const quiereAutoPlay = confirm(`El programa comienza a las ${Math.floor(inicioProg).toString().padStart(2,'0')}:${Math.round((inicioProg - Math.floor(inicioProg)) * 60).toString().padStart(2,'0')}. ¿Quieres que se reproduzca automáticamente cuando empiece?`);
+                if (quiereAutoPlay) {
+                    const quiereNotificacion = confirm("¿Quieres recibir una notificación del navegador cuando comience?");
+                    recordatoriosProgramados.push({
+                        canal: canal,
+                        horaInicio: inicioProg,
+                        notificar: quiereNotificacion
+                    });
+                    mostrarOverlay('Reproducción programada', `El programa se iniciará automáticamente a las ${Math.floor(inicioProg).toString().padStart(2,'0')}:${Math.round((inicioProg - Math.floor(inicioProg)) * 60).toString().padStart(2,'0')}.`);
+                    const iframe = document.getElementById('youtubePlayer');
+                    iframe.src = 'about:blank';
+                    urlActualYoutube = '';
+                    videoIDActual = null;
+                    ocultarErrorReproductor();
+                    modoAutomatico = false;
+                    actualizarIndicadorAuto();
+                }
+                reiniciarTemporizadorInactividad();
+                return;
+            }
+            modoAutomatico = false;
+            canalSeleccionado = canal;
+            actualizarIndicadorAuto();
+            if (esYouTube) { reproducirVideo(url); }
+            else { window.open(url, '_blank'); }
+            reiniciarTemporizadorInactividad();
+        }
+        function reiniciarTemporizadorInactividad() {
+            if (inactividadTimer) clearTimeout(inactividadTimer);
+            inactividadTimer = setTimeout(() => {
+                if (!modoAutomatico) {
+                    modoAutomatico = true;
+                    programaReproducidoAutomaticamente = null;
+                    actualizarIndicadorAuto();
+                    const ahora = new Date();
+                    reproducirProgramaSegunHorario(ahora.getHours(), ahora.getMinutes());
+                }
+            }, 120000);
+        }
+        const weatherCodeMap = {
+            0: "Despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado", 3: "Nublado",
+            45: "Niebla", 48: "Niebla con escarcha", 51: "Llovizna ligera", 53: "Llovizna moderada",
+            55: "Llovizna densa", 61: "Lluvia ligera", 63: "Lluvia moderada", 65: "Lluvia intensa",
+            71: "Nieve ligera", 73: "Nieve moderada", 75: "Nieve intensa", 77: "Granizo",
+            80: "Chubascos ligeros", 81: "Chubascos moderados", 82: "Chubascos violentos",
+            85: "Nevadas ligeras", 86: "Nevadas intensas",
+            95: "Tormenta", 96: "Tormenta con granizo ligero", 99: "Tormenta con granizo intenso"
+        };
+        const weatherEmojiMap = {
+            0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
+            45: "🌫️", 48: "🌫️",
+            51: "🌧️", 53: "🌧️", 55: "🌧️",
+            61: "🌧️", 63: "🌧️", 65: "🌧️",
+            71: "❄️", 73: "❄️", 75: "❄️", 77: "🌨️",
+            80: "🌧️", 81: "🌧️", 82: "🌧️",
+            85: "🌨️", 86: "🌨️",
+            95: "⛈️", 96: "⛈️", 99: "⛈️"
+        };
+        function obtenerClima() {
+            const btnClima = document.getElementById('btnClima');
+            const panelContenido = document.getElementById('contenidoClima');
+            if (!navigator.geolocation) {
+                btnClima.innerHTML = '🌡️ N/A';
+                panelContenido.innerHTML = 'Ubicación no disponible';
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                try {
+                    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=7`);
+                    if (!response.ok) throw new Error("Error de red");
+                    const data = await response.json();
+                    const current = data.current_weather;
+                    const daily = data.daily;
+                    if (current) {
+                        const temp = current.temperature;
+                        const code = current.weathercode;
+                        const emoji = weatherEmojiMap[code] || '🌡️';
+                        btnClima.innerHTML = `${emoji} ${temp}°C`;
+                    }
+                    if (daily && daily.time) {
+                        let html = '';
+                        const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                        for (let i = 0; i < daily.time.length; i++) {
+                            const fecha = new Date(daily.time[i] + 'T00:00:00');
+                            const diaNombre = diasSemana[fecha.getDay()];
+                            const fechaStr = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+                            const code = daily.weather_code[i];
+                            const desc = weatherCodeMap[code] || 'Desconocido';
+                            const emoji = weatherEmojiMap[code] || '🌈';
+                            const max = daily.temperature_2m_max[i];
+                            const min = daily.temperature_2m_min[i];
+                            html += `<div class="clima-dia"><span>${diaNombre} ${fechaStr}</span><span>${emoji} ${desc}</span><span>⬆${max}° ⬇${min}°</span></div>`;
+                        }
+                        panelContenido.innerHTML = html;
+                    } else {
+                        panelContenido.innerHTML = 'Pronóstico no disponible';
+                    }
+                } catch (error) {
+                    btnClima.innerHTML = '🌡️ N/A';
+                    panelContenido.innerHTML = 'Error al obtener el clima';
+                }
+            }, (error) => {
+                btnClima.innerHTML = '🌡️ N/A';
+                panelContenido.innerHTML = 'Permiso de ubicación denegado';
+            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 600000 });
+        }
+        function obtenerCotizacion() {
+            const contenido = document.getElementById('contenidoCotizacion');
+            contenido.innerHTML = 'Cargando...';
+            fetch('https://dolarapi.com/v1/dolares')
+                .then(response => response.json())
+                .then(data => {
+                    let texto = '';
+                    data.forEach(item => {
+                        const nombre = item.nombre || item.casa || 'Desconocido';
+                        const compra = item.compra !== undefined ? item.compra.toFixed(2) : 'N/D';
+                        const venta = item.venta !== undefined ? item.venta.toFixed(2) : 'N/D';
+                        texto += `<div class="cotizacion-item">${nombre}: Compra $${compra} | Venta $${venta}</div>`;
+                    });
+                    return fetch('https://dolarapi.com/v1/cotizaciones')
+                        .then(response => response.json())
+                        .then(cotizaciones => {
+                            function buscarCotizacion(nombres) {
+                                return cotizaciones.find(item => {
+                                    const nombre = (item.nombre || '').toLowerCase();
+                                    const casa = (item.casa || '').toLowerCase();
+                                    return nombres.some(n => nombre.includes(n) || casa.includes(n));
+                                });
+                            }
+                            const euro = buscarCotizacion(['euro']);
+                            const real = buscarCotizacion(['real', 'brasil']);
+                            if (euro) texto += `<div class="cotizacion-item">Euro: Compra € ${euro.compra.toFixed(2)} | Venta € ${euro.venta.toFixed(2)}</div>`;
+                            if (real) texto += `<div class="cotizacion-item">Real: Compra R$ ${real.compra.toFixed(2)} | Venta R$ ${real.venta.toFixed(2)}</div>`;
+                            if (texto === '') texto = 'Cotización no disponible';
+                            contenido.innerHTML = texto;
+                        });
+                })
+                .catch(() => { contenido.textContent = 'Cotización no disponible'; });
+        }
+        function reproducirProgramaSegunHorario(hora, minutos) {
+            if (!datosProgramacionActual || datosProgramacionActual.length === 0) return;
+            if (!modoAutomatico) return;
+            const horaDecimal = hora + minutos / 60;
+            const canal = canalSeleccionado;
+            const programasCanal = datosProgramacionActual.filter(p => p.canal === canal);
+            let programaActual = null;
+            for (const prog of programasCanal) {
+                if (prog.esEnVivo) {
+                    programaActual = prog;
+                    break;
+                }
+                const inicio = prog.horaInicioOriginal ?? prog.horaInicio;
+                const fin = (prog.horaFinOriginal ?? (prog.horaInicio + prog.duracion)) % 24;
+                if (fin < inicio) {
+                    if (horaDecimal >= inicio || horaDecimal < fin) {
+                        programaActual = prog;
+                        break;
+                    }
+                } else {
+                    if (horaDecimal >= inicio && horaDecimal < fin) {
+                        programaActual = prog;
+                        break;
+                    }
+                }
+            }
+            if (!programaActual) return;
+            const idPrograma = programaActual.url ? extraerIDYouTube(programaActual.url) : null;
+            if (idPrograma && videoIDActual === idPrograma) {
+                programaReproducidoAutomaticamente = programaActual;
+                return;
+            }
+            if (programaActual.url && programaActual.url.trim() !== '') {
+                const esYouTube = extraerIDYouTube(programaActual.url);
+                if (esYouTube) {
+                    programaReproducidoAutomaticamente = programaActual;
+                    reproducirVideo(programaActual.url);
+                }
+                else {
+                    mostrarOverlay('Programa actual: ' + programaActual.titulo, 'El enlace no es un video de YouTube embebible');
+                }
+            } else {
+                mostrarNoDisponible();
+            }
+        }
+        function ejecutarRecordatorios(hora, minutos) {
+            if (recordatoriosProgramados.length === 0) return;
+            const horaDecimal = hora + minutos / 60;
+            const pendientes = recordatoriosProgramados.filter(r => horaDecimal >= r.horaInicio);
+            recordatoriosProgramados = recordatoriosProgramados.filter(r => horaDecimal < r.horaInicio);
+            for (const rec of pendientes) {
+                const prog = datosProgramacionActual.find(p => p.canal === rec.canal && Math.abs(p.horaInicio - rec.horaInicio) < 0.01);
+                if (prog && prog.url && prog.url.trim() !== '') {
+                    canalSeleccionado = rec.canal;
+                    modoAutomatico = false;
+                    programaReproducidoAutomaticamente = prog;
+                    actualizarIndicadorAuto();
+                    reproducirVideo(prog.url);
+                    if (rec.notificar && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification('⏰ Programa programado', {
+                            body: `Comienza "${prog.titulo}" en ${obtenerNombreCanal(prog.canal)}`,
+                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📺</text></svg>'
+                        });
+                    }
+                } else {
+                    if (rec.notificar && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification('⏰ Programa programado', {
+                            body: `Comienza un programa en ${obtenerNombreCanal(rec.canal)}`,
+                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📺</text></svg>'
+                        });
+                    }
+                }
+            }
+        }
+        window.addEventListener('message', (event) => {
+            if (event.origin !== 'https://www.youtube-nocookie.com' && event.origin !== 'https://www.youtube.com') return;
+            try {
+                const data = JSON.parse(event.data);
+                if (data.event === 'error' || data.error) { mostrarErrorReproductor(urlActualYoutube); }
+            } catch (e) {}
+        });
+        function actualizarReloj(hora, minutos) {
+            if (!elementoReloj) elementoReloj = document.getElementById('reloj');
+            if (elementoReloj) { elementoReloj.textContent = `${hora.toString().padStart(2,'0')}:${minutos.toString().padStart(2,'0')}`; }
+        }
+        function crearLineaTiempo() {
+            if (!lineaTiempo) {
+                lineaTiempo = document.createElement('div');
+                lineaTiempo.className = 'linea-tiempo';
+                document.getElementById('grilla').appendChild(lineaTiempo);
+            }
+        }
+        function actualizarLineaTiempo(hora, minutos) {
+            if (!lineaTiempo) return;
+            const anchoMediaHoraBase = 75;
+            const left = (hora + minutos / 60) * anchoMediaHoraBase * 2 * escalaActual;
+            lineaTiempo.style.left = left + 'px';
+            horaActualGlobal = hora;
+            minutosActualGlobal = minutos;
+            actualizarReloj(hora, minutos);
+        }
+        function centrarEnHoraActual() {
+            const container = document.getElementById('grillaContainer');
+            const columnaCanales = document.getElementById('columnaCanales');
+            const anchoMediaHoraBase = 75;
+            const anchoHoraBase = anchoMediaHoraBase * 2 * escalaActual;
+            const offsetCanales = columnaCanales.offsetWidth;
+            const horaPos = (horaActualGlobal + minutosActualGlobal / 60) * anchoHoraBase;
+            const scrollLeft = horaPos + offsetCanales - container.clientWidth / 2;
+            container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+        }
+        function ajustarTextoProgramas() {
+            document.querySelectorAll('.programa:not(.sin-programacion)').forEach(prog => {
+                const titulo = prog.querySelector('.titulo');
+                if (!titulo) return;
+                const blockWidth = prog.clientWidth;
+                const titleText = titulo.textContent;
+                const titleLength = titleText.length;
+                const idealFontSize = Math.min(10 * escalaActual, blockWidth / (titleLength * 0.55));
+                const minFontSize = 5;
+                const startSize = Math.max(minFontSize, Math.min(10 * escalaActual, idealFontSize));
+                prog.style.fontSize = startSize + 'px';
+                let intentos = 0;
+                while (titulo.scrollWidth > titulo.clientWidth && intentos < 20) {
+                    const currentSize = parseFloat(prog.style.fontSize);
+                    if (currentSize <= minFontSize) break;
+                    prog.style.fontSize = (currentSize - 0.5) + 'px';
+                    intentos++;
+                }
+            });
+        }
+        function aplicarZoom(centrar = false) {
+            const grilla = document.getElementById('grilla');
+            const columnaCanales = document.getElementById('columnaCanales');
+            if (!grilla || !columnaCanales) return;
+            const columnasTiempo = 48;
+            const anchoMediaHoraBase = 75;
+            const anchoColumna = anchoMediaHoraBase * escalaActual;
+            grilla.style.gridTemplateColumns = `repeat(${columnasTiempo}, ${anchoColumna}px)`;
+            grilla.style.gridTemplateRows = `${55 * escalaActual}px repeat(50, ${90 * escalaActual}px)`;
+            const anchoHora = anchoColumna * 2;
+            const alturaFila = 90 * escalaActual;
+            document.querySelectorAll('.encabezado').forEach(encabezado => { encabezado.style.fontSize = (13 * escalaActual) + 'px'; });
+            document.querySelectorAll('.linea-divisoria').forEach(div => { div.style.width = anchoColumna + 'px'; div.style.flexBasis = anchoColumna + 'px'; });
+            document.querySelectorAll('.programa').forEach(prog => {
+                const inicio = parseFloat(prog.dataset.inicio);
+                const duracion = parseFloat(prog.dataset.duracion);
+                const pista = parseInt(prog.dataset.pista);
+                const numPistas = parseInt(prog.dataset.numpistas);
+                const alturaPorPista = numPistas > 0 ? alturaFila / numPistas : alturaFila;
+                prog.style.left = (inicio * anchoHora) + 'px';
+                prog.style.width = ((duracion + 0.5) * anchoHora) + 'px';
+                prog.style.top = (pista * alturaPorPista) + 'px';
+                prog.style.height = alturaPorPista + 'px';
+                if (prog.classList.contains('sin-programacion')) {
+                    const width = parseFloat(prog.style.width);
+                    const height = parseFloat(prog.style.height);
+                    prog.style.fontSize = Math.min(height * 0.5, width * 0.15) + 'px';
+                } else { prog.style.fontSize = (10 * escalaActual) + 'px'; }
+            });
+            grilla.querySelectorAll('.celda:not(.encabezado)').forEach(row => { row.style.height = `${alturaFila}px`; });
+            const nuevoAnchoColumna = 180 * escalaActual;
+            const nuevaAlturaEncabezado = 55 * escalaActual;
+            const nuevaAlturaFila = 90 * escalaActual;
+            const alturaTotal = (55 + 50 * 90) * escalaActual;
+            const fontSizeEscalada = 14 * escalaActual;
+            columnaCanales.style.width = nuevoAnchoColumna + 'px';
+            columnaCanales.style.height = alturaTotal + 'px';
+            const encabezadoCanal = columnaCanales.querySelector('.encabezado-canal');
+            if (encabezadoCanal) { encabezadoCanal.style.height = nuevaAlturaEncabezado + 'px'; encabezadoCanal.style.fontSize = fontSizeEscalada + 'px'; }
+            columnaCanales.querySelectorAll('.canal-nombre').forEach(nombre => { nombre.style.height = nuevaAlturaFila + 'px'; nombre.style.fontSize = fontSizeEscalada + 'px'; });
+            actualizarLineaTiempo(horaActualGlobal, minutosActualGlobal);
+            if (centrar) {
+                centrarEnHoraActual();
+            }
+            ajustarTextoProgramas();
+        }
+        function iniciarActualizacionAutomatica() {
+            if (intervaloActualizacion) clearInterval(intervaloActualizacion);
+            function actualizar() {
+                verificarCambioDia();
+                const ahora = new Date();
+                const h = ahora.getHours();
+                const m = ahora.getMinutes();
+                actualizarLineaTiempo(h, m);
+                ejecutarRecordatorios(h, m);
+                if (modoAutomatico) { reproducirProgramaSegunHorario(h, m); }
+            }
+            actualizar();
+            const ahora = new Date();
+            const msHastaProximoMinuto = (60 - ahora.getSeconds()) * 1000 - ahora.getMilliseconds();
+            setTimeout(() => { actualizar(); intervaloActualizacion = setInterval(actualizar, 60000); }, msHastaProximoMinuto);
+        }
+        function horaADecimal(valor) {
+            if (typeof valor === 'number') return valor;
+            const str = String(valor).trim();
+            if (str.includes(':')) {
+                const partes = str.split(':');
+                const horas = parseInt(partes[0], 10) || 0;
+                const minutos = parseInt(partes[1], 10) || 0;
+                return horas + minutos / 60;
+            }
+            return parseFloat(str);
+        }
+        function parseCSV(texto) {
+            const lineas = texto.split(/\r?\n/);
+            const datos = [];
+            let inicioDatos = 0;
+            const primera = lineas[0].trim().toLowerCase();
+            if (primera.startsWith('canal') && (primera.includes('horainicio') || primera.includes('horaFin'))) inicioDatos = 1;
+            for (let i = inicioDatos; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (linea === '') continue;
+                const partes = [];
+                let actual = '';
+                let entreComillas = false;
+                for (let j = 0; j < linea.length; j++) {
+                    const ch = linea[j];
+                    if (ch === '"') { entreComillas = !entreComillas; }
+                    else if (ch === ',' && !entreComillas) { partes.push(actual.trim()); actual = ''; }
+                    else { actual += ch; }
+                }
+                partes.push(actual.trim());
+                if (partes.length < 5) continue;
+                const canalNombre = partes[0];
+                const canal = nombreACanal(canalNombre);
+                if (canal === null || canal < 1 || canal > 50) continue;
+
+                const horaInicioRaw = partes[1].trim();
+                const horaFinRaw = partes[2].replace(/^fin:/i, '').trim();
+                let esEnVivo = false;
+                let horaInicio, horaFinDecimal, duracion;
+                if (horaInicioRaw.toUpperCase() === "EN VIVO" || horaFinRaw.toUpperCase() === "EN VIVO") {
+                    esEnVivo = true;
+                    horaInicio = 0;
+                    horaFinDecimal = 24;
+                    duracion = 24;
+                } else {
+                    horaInicio = horaADecimal(partes[1]);
+                    if (isNaN(horaInicio)) continue;
+                    horaFinDecimal = horaADecimal(partes[2].replace(/^fin:/i, '').trim());
+                    if (isNaN(horaFinDecimal)) continue;
+                    duracion = horaFinDecimal - horaInicio;
+                    if (duracion < 0) duracion += 24;
+                    if (duracion <= 0) continue;
+                }
+
+                const titulo = partes[3].replace(/^"|"$/g, '');
+                if (!titulo) continue;
+                const presentadores = partes[4].replace(/^"|"$/g, '');
+                const programa = { canal, horaInicio, duracion, horaFin: horaFinDecimal, titulo, presentadores, esEnVivo };
+                if (partes.length >= 6 && partes[5] !== '') programa.color = partes[5];
+                if (partes.length >= 7 && partes[6] !== '') programa.url = partes[6];
+                datos.push(programa);
+            }
+            return datos;
+        }
+        function ajustarProgramasConsecutivos(programas) {
+            programas.forEach(prog => { prog.horaInicioOriginal = prog.horaInicio; prog.horaFinOriginal = prog.horaFin; });
+            const porCanal = {};
+            programas.forEach(prog => { const c = prog.canal; if (!porCanal[c]) porCanal[c] = []; porCanal[c].push(prog); });
+            const TOLERANCIA = 0.001;
+            const AJUSTE = -0.25;
+            for (const canal in porCanal) {
+                const lista = porCanal[canal];
+                lista.sort((a, b) => a.horaInicio - b.horaInicio);
+                for (let i = 0; i < lista.length - 1; i++) {
+                    const actual = lista[i];
+                    const siguiente = lista[i + 1];
+                    if (Math.abs(actual.horaFin - siguiente.horaInicio) < TOLERANCIA) {
+                        actual.horaFin += AJUSTE;
+                        siguiente.horaInicio -= AJUSTE;
+                        actual.duracion = actual.horaFin - actual.horaInicio;
+                        siguiente.duracion = siguiente.horaFin - siguiente.horaInicio;
+                        if (actual.duracion <= 0) { actual.horaFin = actual.horaInicio + 0.01; actual.duracion = 0.01; }
+                        if (siguiente.duracion <= 0) { siguiente.horaInicio = siguiente.horaFin - 0.01; siguiente.duracion = 0.01; }
+                    }
+                }
+            }
+        }
+        function mostrarErrorGrilla() {
+            document.getElementById('grilla').innerHTML = `<div class="error-grilla">Sin Programación</div>`;
+            document.getElementById('columnaCanales').innerHTML = '';
+        }
+        function renderizarGrilla(datos, horaActual, minutosActual, centrar = true) {
+            const grilla = document.getElementById("grilla");
+            const columnaCanales = document.getElementById("columnaCanales");
+            grilla.innerHTML = "";
+            columnaCanales.innerHTML = "";
+            lineaTiempo = null;
+            const canales = 50;
+            const anchoMediaHoraBase = 75;
+            const anchoHoraBase = anchoMediaHoraBase * 2;
+            const alturaFila = 90;
+            const mediaHoras = 48;
+            const limiteFin = 23.5;
+            const EPSILON = 0.001;
+            const horaDecimal = horaActual + minutosActual / 60;
+            const programasPorCanal = {};
+            const programasEnVivo = {};
+            for (let c = 1; c <= canales; c++) programasPorCanal[c] = [];
+            datos.forEach(prog => {
+                const canal = prog.canal;
+                if (canal < 1 || canal > canales) return;
+                const inicioOrig = parseFloat(prog.horaInicio);
+                const duracionOrig = parseFloat(prog.duracion);
+                if (isNaN(inicioOrig) || isNaN(duracionOrig) || inicioOrig < 0) return;
+                const finOrig = inicioOrig + duracionOrig;
+                const segmentos = [];
+                if (finOrig > 24) {
+                    segmentos.push({ inicio: inicioOrig, fin: 24 });
+                    segmentos.push({ inicio: 0, fin: finOrig - 24 });
+                } else { segmentos.push({ inicio: inicioOrig, fin: finOrig }); }
+                segmentos.forEach(seg => {
+                    let segInicio = seg.inicio;
+                    let segFin = seg.fin;
+                    if (segInicio >= limiteFin) return;
+                    if (segFin > limiteFin) segFin = limiteFin;
+                    const segDuracion = segFin - segInicio;
+                    if (segDuracion <= 0) return;
+                    programasPorCanal[canal].push({ ...prog, inicio: segInicio, duracion: segDuracion, fin: segFin });
+                });
+            });
+            for (let c = 1; c <= canales; c++) {
+                const lista = programasPorCanal[c];
+                lista.sort((a, b) => a.inicio - b.inicio);
+                let enVivo = null;
+                for (const prog of lista) {
+                    if (prog.esEnVivo) {
+                        enVivo = prog;
+                        break;
+                    }
+                    const inicioOrig = prog.horaInicioOriginal ?? prog.horaInicio;
+                    const finOrig = (prog.horaFinOriginal ?? (prog.horaInicio + prog.duracion)) % 24;
+                    if (finOrig < inicioOrig) {
+                        if (horaDecimal >= inicioOrig || horaDecimal < finOrig) {
+                            enVivo = prog;
+                            break;
+                        }
+                    } else {
+                        if (horaDecimal >= inicioOrig && horaDecimal < finOrig) {
+                            enVivo = prog;
+                            break;
+                        }
+                    }
+                }
+                if (enVivo && enVivo.url && enVivo.url.trim() !== '') {
+                    programasEnVivo[c] = enVivo;
+                }
+            }
+            for (let c = 1; c <= canales; c++) {
+                if (programasPorCanal[c].length === 0) {
+                    programasPorCanal[c].push({ inicio: 0, duracion: limiteFin, fin: limiteFin, titulo: "SIN PROGRAMACIÓN", presentadores: "", color: null, url: null, sinProgramacion: true });
+                }
+            }
+            const pistasPorCanal = {};
+            for (let c = 1; c <= canales; c++) {
+                const todosProgs = programasPorCanal[c];
+                const enVivoProg = todosProgs.find(p => p.esEnVivo);
+                const otrosProgs = todosProgs.filter(p => !p.esEnVivo);
+                otrosProgs.sort((a, b) => a.inicio - b.inicio);
+                if (enVivoProg) {
+                    pistasPorCanal[c] = { asignacion: [{ programa: enVivoProg, pista: 0 }], numPistas: 1, tieneEnVivo: true };
+                    otrosProgs.forEach(prog => {
+                        pistasPorCanal[c].asignacion.push({ programa: prog, pista: 0 });
+                    });
+                } else {
+                    const pistas = [];
+                    const asignacion = [];
+                    otrosProgs.forEach(prog => {
+                        let pistaAsignada = -1;
+                        for (let i = 0; i < pistas.length; i++) {
+                            if (pistas[i] <= prog.inicio || Math.abs(pistas[i] - prog.inicio) < EPSILON) {
+                                pistaAsignada = i;
+                                break;
+                            }
+                        }
+                        if (pistaAsignada === -1) { pistaAsignada = pistas.length; pistas.push(prog.fin); }
+                        else { pistas[pistaAsignada] = prog.fin; }
+                        asignacion.push({ programa: prog, pista: pistaAsignada });
+                    });
+                    pistasPorCanal[c] = { asignacion, numPistas: pistas.length, tieneEnVivo: false };
+                }
+            }
+            let canalesHTML = '<div class="encabezado-canal"></div>';
+            for (let canal = 1; canal <= canales; canal++) {
+                let nombre = obtenerNombreCanal(canal);
+                canalesHTML += `<div class="canal-nombre">${nombre}</div>`;
+            }
+            columnaCanales.innerHTML = canalesHTML;
+            let grillaHTML = '';
+            for (let m = 0; m < mediaHoras; m++) {
+                const hora = Math.floor(m / 2);
+                const minuto = m % 2 === 0 ? '00' : '30';
+                grillaHTML += `<div class="celda encabezado">${hora.toString().padStart(2,"0")}:${minuto}</div>`;
+            }
+            for (let canal = 1; canal <= canales; canal++) {
+                const info = pistasPorCanal[canal] || { asignacion: [], numPistas: 0, tieneEnVivo: false };
+                const { asignacion, numPistas, tieneEnVivo } = info;
+                const alturaPorPista = numPistas > 0 ? alturaFila / numPistas : alturaFila;
+                let contenedorHtml = `<div class="celda" style="grid-column: 1 / -1; position: relative; padding:0; overflow:visible; height:${alturaFila}px;">`;
+                contenedorHtml += `<div style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; display:flex; flex-direction:row;">`;
+                for (let m = 0; m < mediaHoras; m++) {
+                    contenedorHtml += `<div class="linea-divisoria" style="border-left:1px solid var(--borde); height:100%; width:${anchoMediaHoraBase}px; flex-shrink:0; margin-left:-0.03px;"></div>`;
+                }
+                contenedorHtml += `</div>`;
+                const enVivoPrograma = programasEnVivo[canal] || null;
+                asignacion.forEach(({ programa, pista }) => {
+                    const { titulo, presentadores, inicio, fin, duracion, color, url, sinProgramacion, esEnVivo, horaInicioOriginal, horaFinOriginal } = programa;
+                    const tieneURL = url && url.trim() !== '';
+                    let colorFondo;
+                    if (sinProgramacion || !tieneURL) { colorFondo = "#444"; }
+                    else { colorFondo = color || "#444"; }
+                    const inicioParaOnClick = horaInicioOriginal !== undefined ? horaInicioOriginal : inicio;
+                    let onclickAttr;
+                    if (tieneURL) {
+                        const esYouTube = extraerIDYouTube(url);
+                        onclickAttr = `onclick="clicPrograma(event, '${url.replace(/'/g, "\\'")}', true, ${esYouTube ? 'true' : 'false'}, ${canal}, ${inicioParaOnClick})"`;
+                    } else if (sinProgramacion) { onclickAttr = ''; }
+                    else { onclickAttr = `onclick="clicPrograma(event, null, false, false, ${canal}, ${inicioParaOnClick})"`; }
+                    const inicioMostrar = horaInicioOriginal !== undefined ? horaInicioOriginal : inicio;
+                    const finMostrar = horaFinOriginal !== undefined ? horaFinOriginal : fin;
+                    let horarioHtml;
+                    if (esEnVivo) {
+                        horarioHtml = `<div class="horario">En Vivo</div>`;
+                    } else if (sinProgramacion) {
+                        horarioHtml = '';
+                    } else {
+                        const inicioHoras = Math.floor(inicioMostrar);
+                        const inicioMinutos = Math.round((inicioMostrar - inicioHoras) * 60);
+                        const finHoras = Math.floor(finMostrar);
+                        const finMinutos = Math.round((finMostrar - finHoras) * 60);
+                        const inicioStr = `${inicioHoras.toString().padStart(2,"0")}:${inicioMinutos.toString().padStart(2,"0")}`;
+                        const finStr = `${finHoras.toString().padStart(2,"0")}:${finMinutos.toString().padStart(2,"0")}`;
+                        horarioHtml = `<div class="horario">${inicioStr} - ${finStr}</div>`;
+                    }
+                    const presentadoresHtml = (!sinProgramacion && presentadores) ? `<div class="presentadores">${presentadores}</div>` : '';
+                    const left = inicio * anchoHoraBase;
+                    const width = duracion * anchoHoraBase;
+                    let top, height, zIndex;
+                    if (tieneEnVivo) {
+                        if (esEnVivo) {
+                            top = 0;
+                            height = alturaFila;
+                            zIndex = 0;
+                        } else {
+                            top = 0;
+                            height = alturaFila;
+                            zIndex = 1;
+                        }
+                    } else {
+                        top = pista * alturaPorPista;
+                        height = alturaPorPista;
+                        zIndex = 2;
+                    }
+                    const fontSizePlaceholder = sinProgramacion ? Math.min(height * 0.5, width * 0.15) : (10 * escalaActual);
+                    let claseExtra = sinProgramacion ? ' sin-programacion' : '';
+                    const esEnVivoAhora = enVivoPrograma && programa === enVivoPrograma;
+                    if (esEnVivoAhora && tieneURL) {
+                        claseExtra += ' en-vivo';
+                    }
+                    contenedorHtml += `
+                    <div class="programa${claseExtra}" style="position:absolute; left:${left}px; top:${top}px; width:${width}px; height:${height}px; background:${colorFondo}; font-size:${fontSizePlaceholder}px; pointer-events:${sinProgramacion ? 'none' : 'auto'}; --color-base:${colorFondo}; z-index:${zIndex};"
+                         data-inicio="${inicio}" data-duracion="${duracion}" data-pista="${pista}" data-numpistas="${numPistas}" ${onclickAttr}>
+                        <div class="titulo">${titulo}</div>
+                        ${presentadoresHtml}
+                        ${horarioHtml}
+                    </div>`;
+                });
+                contenedorHtml += `</div>`;
+                grillaHTML += contenedorHtml;
+            }
+            grilla.innerHTML = grillaHTML;
+            crearLineaTiempo();
+            actualizarLineaTiempo(horaActual, minutosActual);
+            aplicarZoom(centrar);
+        }
+        function alternarModo() {
+            const body = document.body;
+            const boton = document.getElementById('botonModo');
+            if (body.classList.contains('modo-oscuro')) { body.classList.remove('modo-oscuro'); body.classList.add('modo-claro'); boton.innerHTML = '🌙 Modo Oscuro'; }
+            else { body.classList.remove('modo-claro'); body.classList.add('modo-oscuro'); boton.innerHTML = '☀️ Modo Claro'; }
+        }
+        function alternarAltoContraste() {
+            const body = document.body;
+            body.classList.toggle('alto-contraste');
+            if (body.classList.contains('alto-contraste')) { localStorage.setItem('altoContraste', 'true'); }
+            else { localStorage.removeItem('altoContraste'); }
+        }
+        function obtenerEscalaMinima() {
+            const container = document.getElementById('grillaContainer');
+            if (!container) return 0.3;
+            const anchoDisponible = container.clientWidth;
+            const anchoTotalBase = 180 + 48 * 75;
+            const escala = (anchoDisponible - 10) / anchoTotalBase;
+            return Math.max(0.2, Math.min(1, escala));
+        }
+        function verificarCambioDia() {
+            if (cargandoProgramacion) return;
+            const ahora = new Date();
+            const h = ahora.getHours();
+            const m = ahora.getMinutes();
+            if (h === 23 && m === 57 && !recargaPreviaHecha) {
+                recargaPreviaHecha = true;
+                bloqueoActualizaciones = true;
+                actualizarDatosGrid();
+            }
+            if (h === 0 && m === 0) {
+                recargaPreviaHecha = false;
+                bloqueoActualizaciones = false;
+            }
+            const formateador = new Intl.DateTimeFormat('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' });
+            const partes = formateador.formatToParts(ahora);
+            const dia = partes.find(p => p.type === 'day').value;
+            const mes = partes.find(p => p.type === 'month').value;
+            const anio = partes.find(p => p.type === 'year').value;
+            const fechaActualStr = `${anio}-${mes}-${dia}`;
+            if (ultimaFechaCargaStr && fechaActualStr !== ultimaFechaCargaStr) {
+                cargarProgramacion();
+            }
+        }
+        async function cargarProgramacion() {
+            if (cargandoProgramacion) return;
+            cargandoProgramacion = true;
+            let hora, minutos;
+            try {
+                const response = await fetch('https://worldtimeapi.org/api/timezone/America/Argentina/Buenos_Aires');
+                const data = await response.json();
+                const datetime = new Date(data.datetime);
+                hora = datetime.getHours();
+                minutos = datetime.getMinutes();
+            } catch (error) {
+                const ahora = new Date();
+                hora = ahora.getHours();
+                minutos = ahora.getMinutes();
+            }
+            try {
+                const urlCSV = obtenerURLCSV();
+                const respuesta = await fetch(urlCSV);
+                if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+                const texto = await respuesta.text();
+                const datos = parseCSV(texto);
+                if (datos.length === 0) throw new Error("Archivo vacío o sin programas válidos");
+                ajustarProgramasConsecutivos(datos);
+                datosProgramacionActual = datos;
+                if (!canalSeleccionado) canalSeleccionado = CANAL_AUTO_DEFAULT;
+                programaReproducidoAutomaticamente = null;
+                actualizarIndicadorAuto();
+                const escalaMin = obtenerEscalaMinima();
+                if (escalaActual > 1) escalaActual = 1;
+                if (escalaActual < escalaMin) escalaActual = escalaMin;
+                renderizarGrilla(datos, hora, minutos, true);
+                if (!primerCargaCompletada) {
+                    primerCargaCompletada = true;
+                    mostrarOverlay('Seleccione un programa', 'Haga clic en cualquier programa de la grilla');
+                    reiniciarTemporizadorInactividad();
+                }
+                iniciarActualizacionAutomatica();
+            } catch (error) {
+                mostrarErrorGrilla();
+            }
+            obtenerClima();
+            setInterval(obtenerClima, 1800000);
+            obtenerCotizacion();
+            if (localStorage.getItem('altoContraste') === 'true') { document.body.classList.add('alto-contraste'); }
+            const container = document.getElementById('grillaContainer');
+            container.addEventListener('dblclick', centrarEnHoraActual);
+            document.addEventListener('keydown', (e) => { if (e.key === 'z' || e.key === 'Z') { teclaZPresionada = true; e.preventDefault(); } });
+            document.addEventListener('keyup', (e) => { if (e.key === 'z' || e.key === 'Z') { teclaZPresionada = false; } });
+            container.addEventListener('wheel', (e) => {
+                if (teclaZPresionada) {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    const escalaMin = obtenerEscalaMinima();
+                    escalaActual = Math.min(3, Math.max(escalaMin, escalaActual + delta));
+                    aplicarZoom(false);
+                }
+            }, { passive: false });
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    distanciaPinchazoInicial = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                    escalaInicialPinchazo = escalaActual;
+                }
+            }, { passive: false });
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const distanciaActual = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                    const factor = distanciaActual / distanciaPinchazoInicial;
+                    const nuevaEscala = escalaInicialPinchazo * factor;
+                    const escalaMin = obtenerEscalaMinima();
+                    escalaActual = Math.min(3, Math.max(escalaMin, nuevaEscala));
+                    aplicarZoom(false);
+                }
+            }, { passive: false });
+            container.addEventListener('touchend', (e) => { if (e.touches.length < 2) { distanciaPinchazoInicial = 0; } });
+            window.addEventListener('resize', () => {
+                const escalaMin = obtenerEscalaMinima();
+                if (escalaActual < escalaMin) { escalaActual = escalaMin; aplicarZoom(false); }
+            });
+            cargandoProgramacion = false;
+        }
+        async function actualizarDatosGrid() {
+            if (cargandoProgramacion) return;
+            try {
+                const urlCSV = obtenerURLCSV();
+                const respuesta = await fetch(urlCSV);
+                if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+                const texto = await respuesta.text();
+                const datos = parseCSV(texto);
+                if (datos.length === 0) throw new Error("Archivo vacío o sin programas válidos");
+                ajustarProgramasConsecutivos(datos);
+                datosProgramacionActual = datos;
+                programaReproducidoAutomaticamente = null;
+                const ahora = new Date();
+                renderizarGrilla(datos, ahora.getHours(), ahora.getMinutes(), false);
+                if (modoAutomatico) {
+                    reproducirProgramaSegunHorario(ahora.getHours(), ahora.getMinutes());
+                }
+            } catch (error) {}
+        }
+        setInterval(() => {
+            if (!cargandoProgramacion && !bloqueoActualizaciones && !document.hidden) {
+                actualizarDatosGrid();
+            }
+        }, 165000);
+        document.addEventListener('visibilitychange', () => {});
+        document.getElementById('btnCotizacion').addEventListener('click', function(e) { e.stopPropagation(); const panel = document.getElementById('panelCotizacion'); panel.classList.toggle('mostrar'); });
+        document.getElementById('btnClima').addEventListener('click', function(e) { e.stopPropagation(); const panel = document.getElementById('panelClima'); panel.classList.toggle('mostrar'); });
+        document.addEventListener('click', function(e) {
+            const dropdownCot = document.getElementById('dropdownCotizacion');
+            const dropdownCli = document.getElementById('dropdownClima');
+            if (!dropdownCot.contains(e.target)) { document.getElementById('panelCotizacion').classList.remove('mostrar'); }
+            if (!dropdownCli.contains(e.target)) { document.getElementById('panelClima').classList.remove('mostrar'); }
+        });
+        document.getElementById('botonModo').addEventListener('click', alternarModo);
+        document.getElementById('botonAC').addEventListener('click', alternarAltoContraste);
+        cargarProgramacion();
+    </script>
+</body>
+</html>
